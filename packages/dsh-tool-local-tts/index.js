@@ -240,48 +240,93 @@ async function synthesizeViaCustomCliTts(spec, vars, absOutputPath) {
   return { ok: true, provider: `${spec.id}-cli`, outputPath: absOutputPath }
 }
 
-async function synthesizeViaWindowsSapi(text, speed = 1.0, gender = 'neutral', absOutputPath = '') {
-  if (process.platform !== 'win32') {
-    throw new Error('Windows SAPI 引擎仅在 Windows 系统可用')
-  }
+/**
+ * Cross-platform zero-GPU system TTS synthesizer.
+ * Dispatches by the resolved engine spec's `provider` field:
+ *   - windows-sapi : PowerShell + System.Speech  (Windows)
+ *   - macos-say    : built-in `say` command       (macOS)
+ *   - espeak-ng    : espeak-ng / espeak command   (Linux)
+ * Every branch produces a raw audio file that is normalized to 48kHz PCM WAV
+ * via FFmpeg (`normalizeOutputToPcmWav`), so downstream code stays identical.
+ */
+async function synthesizeViaSystemTts(text, speed = 1.0, gender = 'neutral', absOutputPath = '', spec = {}) {
+  const provider = String(spec.provider || (process.platform === 'win32' ? 'windows-sapi' : process.platform === 'darwin' ? 'macos-say' : 'espeak-ng'))
   const tmpDir = join(REPO_ROOT, '.tmp')
   mkdirSync(tmpDir, { recursive: true })
   const stamp = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
-  const tmpTxt = join(tmpDir, `sapi-${stamp}.txt`)
-  const tmpRawWav = join(tmpDir, `sapi-${stamp}.wav`)
-  writeFileSync(tmpTxt, String(text || '').trim(), 'utf8')
-
-  // System.Speech Rate range is -10..10 (roughly +-10% speed per step)
-  const sapiRate = Math.max(-6, Math.min(6, Math.round((Number(speed || 1.0) - 1.0) * 14)))
-  const psScript = [
-    '$ErrorActionPreference = "Stop"',
-    'Add-Type -AssemblyName System.Speech',
-    '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer',
-    `$voices = $s.GetInstalledVoices() | Where-Object { $_.Enabled }`,
-    '$zh = $voices | Where-Object { $_.VoiceInfo.Culture.Name -like "zh*" } | Select-Object -First 1',
-    'if ($zh) { $s.SelectVoice($zh.VoiceInfo.Name) }',
-    `$s.Rate = ${sapiRate}`,
-    '$s.Volume = 100',
-    `$s.SetOutputToWaveFile('${tmpRawWav.replace(/'/g, "''")}')`,
-    `$txt = [System.IO.File]::ReadAllText('${tmpTxt.replace(/'/g, "''")}', [System.Text.Encoding]::UTF8)`,
-    '$s.Speak($txt)',
-    '$s.Dispose()',
-  ].join('; ')
+  const spoken = String(text || '').trim()
+  const tmpTxt = join(tmpDir, `systts-${stamp}.txt`)
+  const rawExt = provider === 'macos-say' ? '.aiff' : '.wav'
+  const tmpRaw = join(tmpDir, `systts-${stamp}${rawExt}`)
+  writeFileSync(tmpTxt, spoken, 'utf8')
 
   try {
-    const run = await runCommandRedirected(
-      'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-Command', psScript],
-      { cwd: tmpDir, timeoutMs: 60_000 },
-    )
-    if (run.code !== 0 || !existsSync(tmpRawWav) || statSync(tmpRawWav).size < 128) {
-      throw new Error(`Windows 原生语音合成失败: ${(run.stderr || run.stdout || `exit ${run.code}`).slice(0, 300)}`)
+    let run
+    if (provider === 'macos-say') {
+      // macOS built-in `say`: -r is words/minute (~180 = 1.0x), -o writes AIFF.
+      const rate = Math.max(90, Math.min(360, Math.round(180 * (Number(speed) || 1.0))))
+      // Prefer a configurable Chinese voice; fall back to the system default voice.
+      const voice = String(spec.voice || process.env.MACOS_SAY_VOICE || 'Tingting').trim()
+      run = await runCommandRedirected(
+        'say',
+        ['-v', voice, '-r', String(rate), '-o', tmpRaw, spoken],
+        { cwd: tmpDir, timeoutMs: 60_000 },
+      )
+      // Retry with the default voice if the chosen one is unavailable on this Mac.
+      if (run.code !== 0 || !existsSync(tmpRaw)) {
+        run = await runCommandRedirected(
+          'say',
+          ['-r', String(rate), '-o', tmpRaw, spoken],
+          { cwd: tmpDir, timeoutMs: 60_000 },
+        )
+      }
+      if (run.code !== 0 || !existsSync(tmpRaw) || statSync(tmpRaw).size < 128) {
+        throw new Error(`macOS say 语音合成失败: ${(run.stderr || run.stdout || `exit ${run.code}`).slice(0, 300)}`)
+      }
+    } else if (provider === 'espeak-ng') {
+      const rate = Math.max(80, Math.min(400, Math.round(175 * (Number(speed) || 1.0))))
+      const lang = String(spec.lang || 'zh').trim()
+      const espeakBin = String(spec.command || process.env.ESPEAK_BIN || 'espeak-ng').trim()
+      run = await runCommandRedirected(
+        espeakBin,
+        ['-v', lang, '-s', String(rate), '-w', tmpRaw, spoken],
+        { cwd: tmpDir, timeoutMs: 60_000 },
+      )
+      if (run.code !== 0 || !existsSync(tmpRaw) || statSync(tmpRaw).size < 128) {
+        throw new Error(`espeak-ng 语音合成失败（请先安装 espeak-ng）: ${(run.stderr || run.stdout || `exit ${run.code}`).slice(0, 300)}`)
+      }
+    } else {
+      // Windows SAPI (unchanged behavior, kept for cross-platform parity)
+      const sapiRate = Math.max(-6, Math.min(6, Math.round((Number(speed || 1.0) - 1.0) * 14)))
+      const psScript = [
+        '$ErrorActionPreference = "Stop"',
+        'Add-Type -AssemblyName System.Speech',
+        '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer',
+        '$voices = $s.GetInstalledVoices() | Where-Object { $_.Enabled }',
+        '$zh = $voices | Where-Object { $_.VoiceInfo.Culture.Name -like "zh*" } | Select-Object -First 1',
+        'if ($zh) { $s.SelectVoice($zh.VoiceInfo.Name) }',
+        `$s.Rate = ${sapiRate}`,
+        '$s.Volume = 100',
+        `$s.SetOutputToWaveFile('${tmpRaw.replace(/'/g, "''")}')`,
+        `$txt = [System.IO.File]::ReadAllText('${tmpTxt.replace(/'/g, "''")}', [System.Text.Encoding]::UTF8)`,
+        '$s.Speak($txt)',
+        '$s.Dispose()',
+      ].join('; ')
+      run = await runCommandRedirected(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-Command', psScript],
+        { cwd: tmpDir, timeoutMs: 60_000 },
+      )
+      if (run.code !== 0 || !existsSync(tmpRaw) || statSync(tmpRaw).size < 128) {
+        throw new Error(`Windows 原生语音合成失败: ${(run.stderr || run.stdout || `exit ${run.code}`).slice(0, 300)}`)
+      }
     }
-    await normalizeOutputToPcmWav(tmpRawWav, absOutputPath)
-    return { ok: true, provider: 'windows-sapi-cpu', outputPath: absOutputPath }
+
+    await normalizeOutputToPcmWav(tmpRaw, absOutputPath)
+    return { ok: true, provider: spec.id || provider, outputPath: absOutputPath }
   } finally {
     try { rmSync(tmpTxt, { force: true }) } catch {}
-    try { rmSync(tmpRawWav, { force: true }) } catch {}
+    try { rmSync(tmpRaw, { force: true }) } catch {}
   }
 }
 
@@ -397,8 +442,8 @@ export async function executeGenerateSpeech(args = {}) {
 
   let providerInfo = {}
 
-  if (engineSpec.kind === 'windows-sapi') {
-    providerInfo = await synthesizeViaWindowsSapi(spokenText, effectiveSpeed, effectiveVoice.gender || 'neutral', absOutputPath)
+  if (engineSpec.kind === 'system-tts') {
+    providerInfo = await synthesizeViaSystemTts(spokenText, effectiveSpeed, effectiveVoice.gender || 'neutral', absOutputPath, engineSpec)
   } else if (engineSpec.kind === 'openai-tts' || engineSpec.kind === 'http-json' || engineSpec.kind === 'cli-command') {
     const customVars = {
       text: spokenText,

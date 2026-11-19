@@ -4,8 +4,10 @@
 > **Dual-Engine (Remotion 4.x + Three.js 3D & HTML5 + Three.js) Multi-Agent AI Video Studio for DeepSeek Harness — Import Assets, AI Script & Prompt Polish, BGM Beat-Sync, IndexTTS-2.5 / GPT-SoVITS Voice & Clone, Opus 5.5 Vibecoding 3D TSX Coding & Full-FPS MP4**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Platform: Windows 11](https://img.shields.io/badge/Platform-Windows%2011-0078D6.svg)](#)
+[![Platform: Windows / macOS / Linux](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D6.svg)](#)
 [![Engine: Remotion 4.x + Three.js 3D & HTML5](https://img.shields.io/badge/Engine-Remotion%204.x%20%2B%20Three.js%203D%20%7C%20HTML5-38bdf8.svg)](#)
+
+> 🍎 **macOS 已适配（本 fork）**：内置 `say` 系统语音引擎作为零显卡配音兜底、Apple Silicon/Intel 核显检测、跨平台浏览器路径与启动脚本。用 `bash start-workbench.sh` 即可一键启动。详见 [四、安装](#-四windows--macos--linux-安装与挂载-deepseek-harness-quick-start)。
 [![TTS: IndexTTS-2.5 & GPT-SoVITS](https://img.shields.io/badge/TTS-IndexTTS--2.5%20%7C%20GPT--SoVITS-10b981.svg)](#)
 
 ---
@@ -15,7 +17,7 @@
 - [💻 电脑配置要求与低配电脑保护机制 (Hardware & Low-Spec Guard)](#-电脑配置要求与低配电脑保护机制-hardware--low-spec-guard)
 - [二、系统架构图 (Architecture)](#-二系统架构图-architecture)
 - [三、工作台使用指南（AI 作战大屏 + 分步精修）](#-三工作台使用指南ai-作战大屏--分步精修)
-- [四、Windows 11 安装与挂载 DeepSeek Harness (Quick Start)](#-四windows-11-安装与挂载-deepseek-harness-quick-start)
+- [四、Windows / macOS / Linux 安装与挂载 DeepSeek Harness (Quick Start)](#-四windows--macos--linux-安装与挂载-deepseek-harness-quick-start)
 - [五、本地 IndexTTS-2.5 与声音克隆指南](#-五本地-indextts-25-与声音克隆指南)
 - [六、数字人叠加引擎说明 (`@dsh-video/tool-avatar`)](#-六数字人叠加引擎说明-dsh-videotool-avatar)
 - [七、常见问题排查 (Troubleshooting)](#-七常见问题排查-troubleshooting)
@@ -49,8 +51,8 @@
    - **AI 作战大屏一站式发车控制台**：无需跳转进入分步精修第 2 步，直接在作战大屏第 3 卡片即可自由切换 **`⚛️ Remotion + Three.js 3D`** 与 **`🌐 HTML5 + Three.js`** 渲染引擎、**`🪐 Vibecoding 3D / SVG / HUD 视效模式`**、**`📺 画质与帧率`**（`1080p`/`2K`/`4K` · `30fps`/`60fps`）、**`🎹 背景配乐方案`**、**`🎙 主讲音色/克隆`** 与 **`数字人口播`**，所有参数实时同步落盘。
    - **Step 3 监看台与作战大屏互动分镜预览 + 预设版式直切**：自动通过 FFmpeg 从 `final.mp4` 为全部分镜抽取实景关键帧缩略图 (`output/scene-thumbs/*.jpg`)，Remotion AI 成片直接支持 **「🎬 成片原画时间轴」** 点击分镜精准跳转；在 AI 自由编码模式下，若某幕想快速切回内置版式（如 `split-stage`、`hud-telemetry-dashboard` 等），在监看台第 3 步下拉选择对应版式（自动标记 `useBuiltinLayout`）即可实时覆盖生效。
    - **AI 辅助创作角标 (`aiBadge`)**：支持自由开启/关闭及 **右上角（默认）/ 左上角 / 右下角 / 左下角** 四角自由切换，避免遮挡主体标题。
-5. **🎙️ 多引擎灵活配音（`IndexTTS-2.5` / `IndexTTS-2` · `GPT-SoVITS` 低显存 · `Windows 系统原生纯CPU` · 自定义模型）(`@dsh-video/tool-local-tts`)**：
-   - **不被单一模型绑定**：工作台内置 **「多引擎配音中心」**，可一键切换 **`IndexTTS-2.5`**（8GB+ 高保真情感克隆）、**`IndexTTS-2`**、**`GPT-SoVITS`**（4GB+ 显存轻量快速，兼容 `api_v2.py` 与 `v1`），以及面向**零独显低配电脑**的 **`Windows 系统原生中文语音 (0GB 显存免下载开箱即用)`**；
+5. **🎙️ 多引擎灵活配音（`IndexTTS-2.5` / `IndexTTS-2` · `GPT-SoVITS` 低显存 · `系统原生纯CPU (Mac say / Win SAPI / Linux espeak)` · 自定义模型）(`@dsh-video/tool-local-tts`)**：
+   - **不被单一模型绑定**：工作台内置 **「多引擎配音中心」**，可一键切换 **`IndexTTS-2.5`**（8GB+ 高保真情感克隆）、**`IndexTTS-2`**、**`GPT-SoVITS`**（4GB+ 显存轻量快速，兼容 `api_v2.py` 与 `v1`），以及面向**零独显低配电脑**的 **系统原生语音（🍎 macOS `say` 内置中文音色 Tingting / Meijia · Windows SAPI · Linux espeak-ng，0GB 显存免下载开箱即用）**；
    - **支持自由添加/导入其他配音模型**：内置 OpenAI `/v1/audio/speech` 协议（Fish Speech、Kokoro 82M、OneAPI/SiliconFlow）、通用 HTTP JSON/GET（CosyVoice、ChatTTS、Sherpa-ONNX）以及 **零显卡纯 CPU 本地命令行**（如 `edge-tts`）模板，支持 JSON 导入导出分享与一键试听测试；
    - 内置 205+ 音色标签库（自动支持场景语速 `speechRate` 与多维情感调节）、浏览器录音降噪克隆与 `ffprobe` 实测帧数精确回填。
 6. **🛡️ 实时硬件体检 & 低配电脑保护机制（8GB 内存 / 无独显亦可用）**：
@@ -65,11 +67,11 @@
 ## 💻 电脑配置要求与低配电脑保护机制 (Hardware & Low-Spec Guard)
 
 > **常见问题澄清：为什么有些 AI 会提示“电脑配置太低无法运行”？**  
-> 本插件只有在运行 **本地 `IndexTTS-2.5` 大模型声音克隆** 或 **2K/4K 60fps 高并发渲染** 时才需要 8GB+ 独立显存；而插件的 **核心双引擎视频渲染（Remotion + HTML5 + Three.js 3D 2D 安全光栅化）并不强制独立显卡**！配合内置的 **「低配电脑保护模式」** 与 **「Windows 原生纯 CPU / Edge-TTS / 纯音乐卡点配音」**，**8GB 内存的普通办公笔记本也能稳定出片。**
+> 本插件只有在运行 **本地 `IndexTTS-2.5` 大模型声音克隆** 或 **2K/4K 60fps 高并发渲染** 时才需要 8GB+ 独立显存；而插件的 **核心双引擎视频渲染（Remotion + HTML5 + Three.js 3D 2D 安全光栅化）并不强制独立显卡**！配合内置的 **「低配电脑保护模式」** 与 **「系统原生纯 CPU（Mac `say` / Win SAPI）/ Edge-TTS / 纯音乐卡点配音」**，**8GB 内存的普通办公笔记本也能稳定出片。**
 
 | 档位说明 | CPU 处理器 | 系统内存 (RAM) | 显卡 / 显存要求 | 磁盘可用空间 | 适用工作流与建议规格 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **🟢 最低可运行配置**<br>*(开启低配保护模式)* | **4 核 4 线程** 及以上 | **8 GB**<br>*(渲染时空闲 ≥ 2.5 GB)* | **核显 / 无独显均可**<br>*(Three.js 使用 2D 安全投影，零 WebGL 崩溃)* | **≥ 3 GB** | • 分辨率：**720p · 30fps**（单并发保护）<br>• 配音：**Windows 原生语音 (0显存)** / **Edge-TTS** / **纯音乐卡点 (免 TTS)** / 云端 API |
+| **🟢 最低可运行配置**<br>*(开启低配保护模式)* | **4 核 4 线程** 及以上 | **8 GB**<br>*(渲染时空闲 ≥ 2.5 GB)* | **核显 / 无独显均可**<br>*(Three.js 使用 2D 安全投影，零 WebGL 崩溃)* | **≥ 3 GB** | • 分辨率：**720p · 30fps**（单并发保护）<br>• 配音：**系统原生语音（Mac `say` / Win SAPI，0显存）** / **Edge-TTS** / **纯音乐卡点 (免 TTS)** / 云端 API |
 | **🟡 流畅推荐配置** | **8 核** 及以上<br>*(i5 / Ryzen 5+)* | **16 GB**<br>*(空闲 ≥ 5.5 GB)* | **NVIDIA 6GB–8GB+ 显存**<br>*(可流畅本地跑 TTS + 渲染)* | **≥ 10 GB** | • 分辨率：**1080p · 30/60fps**<br>• 配音：本地 **GPT-SoVITS (4GB+)** 或 **IndexTTS-2.5** + 全功能 AI 编程 |
 | **🔵 4K 旗舰配置** | **12–16 核** 及以上 | **32 GB+** | **NVIDIA RTX 8GB–16GB+** | **≥ 20 GB SSD** | • 分辨率：**2K / 4K · 60fps** 多并发极速渲染 + 本地 IndexTTS-2.5 满血 Qwen 情绪控制 |
 
@@ -79,7 +81,7 @@
 2. **CPU 温和编码限核**：FFmpeg 编码线程自动限制在 `2–4` 核并切为 `veryfast` 预设，避免 100% 满载导致 DSH 客户端卡顿、发热掉驱动或系统无响应；延长单帧渲染超时阈值至 **`180s`** 防慢机误超时。
 3. **画质与帧率智能护航**：在低配/强保护档自动将 `2K/4K` 或 `60fps` 护航降档为流畅 `720p/1080p 30fps`（8GB 内存主机护航 `720p`），帧画素计算量最高减少 75%。
 4. **3D 画布轻量减载 (`lowSpecSafe`)**：`<FreeformThreeStage />` 与 `<ThreeCyberStage />` 自动以 `0.72x` 内部画布尺寸渲染并缩减 `45%` 实时粒子数，低配 CPU 也能快速跑完 Three.js 场景。
-5. **零显卡配音兜底推荐**：检测到无 `4GB+` NVIDIA 显存时，自动引导或默认启用零显卡方案（Windows 系统原生中文语音 / Edge-TTS / 纯音乐动画卡点），绝不把无独显用户拦在门外。
+5. **零显卡配音兜底推荐**：检测到无 `4GB+` NVIDIA 显存时，自动引导或默认启用零显卡方案（系统原生语音 Mac `say` / Win SAPI / Edge-TTS / 纯音乐动画卡点），绝不把无独显用户拦在门外。
 
 ---
 
@@ -125,18 +127,41 @@ flowchart TB
 
 ---
 
-## 🚀 四、Windows 11 安装与挂载 DeepSeek Harness (Quick Start)
+## 🚀 四、Windows / macOS / Linux 安装与挂载 DeepSeek Harness (Quick Start)
 
 ### 前置依赖（按需准备）
 - **必装**：
   - [Node.js](https://nodejs.org/) `>= 20.0.0`（推荐 Node 22 / 24）
   - `FFmpeg` 与 `ffprobe`（已加入系统 `PATH`，或稍后在 `.env` 中指定绝对路径）
-  - Windows 系统已安装 **Microsoft Edge** 或 Chrome（用于 HTML5 无头 Chromium CDP 逐帧渲染）
+  - 系统已安装 **Chrome / Chromium / Edge** 之一（用于 HTML5 无头 Chromium CDP 逐帧渲染；Mac 上装 Chrome 即可）
+    - 🍎 Mac 快速安装：`brew install node ffmpeg`
 - **可选（按需开启对应引擎）**：
   - **本地真人配音 / 克隆 (`IndexTTS-2.5` 推荐)**：本机准备 [IndexTTS-2.5](https://github.com/index-tts/index-tts) 仓库目录（包含 `indextts/infer_v2_5.py`、`checkpoints/config.yaml` 与模型权重），并拥有可运行其推理的 Python 环境（支持 GPU BF16 推理，亦兼容旧版 `IndexTTS-2` 与 `GPT-SoVITS`）。如暂未部署本地 TTS，仍可使用「纯音乐卡点 (免 TTS)」模式或配置外接语音/字幕工作流。
   - **Remotion 引擎**：本机准备一个包含 `@remotion/bundler`、`@remotion/renderer`、`remotion`、`react` 的模板工程目录（在 `.env` 填入 `REMOTION_TEMPLATE_ROOT`）；如暂不安装 Remotion，可直接使用开箱即用的 **HTML5 动效引擎**。
 
 ### 安装步骤
+
+### 🍎 macOS 快速启动（本 fork 已适配）
+
+```bash
+# 1. 安装前置依赖（首次）
+brew install node ffmpeg        # Node >= 20
+
+# 2. 克隆仓库并复制配置模板
+git clone https://github.com/ffan008/dsh-video-workbench.git
+cd dsh-video-workbench
+cp .env.example .env            # 零配置可留空；配音默认用系统 say
+
+# 3. 一键启动（自动打开浏览器 http://127.0.0.1:4399）
+bash start-workbench.sh
+# 或： pnpm install && pnpm start:mac
+
+# 查看 Mac 可用中文语音： say -v '?'
+```
+
+> Mac 上 `FFMPEG_PATH` / `FFPROBE_PATH` 留 `ffmpeg` / `ffprobe` 即可（走 PATH）；浏览器会自动找 Chrome/Edge；配音引擎默认零显卡的 `macos-say-cpu`，无需 IndexTTS 模型。需要更高音质时可配 Edge-TTS、云端 API 或本地 GPT-SoVITS/IndexTTS。
+
+### Windows 安装
 
 ```powershell
 # 1. 克隆仓库
@@ -150,23 +175,24 @@ Copy-Item .env.example .env
 编辑 `.env`（常用核心字段如下，具体见 [`.env.example`](./.env.example)）：
 
 ```env
-# 必填/推荐：FFmpeg 与 ffprobe 可执行文件路径
-FFMPEG_PATH=D:/your_tools/ffmpeg/ffmpeg.exe
-FFPROBE_PATH=D:/your_tools/ffmpeg/ffprobe.exe
+# FFmpeg 与 ffprobe（Mac 直接用 PATH 里的即可，无需填写绝对路径）
+FFMPEG_PATH=ffmpeg                         # Win 示例: D:/your_tools/ffmpeg/ffmpeg.exe
+FFPROBE_PATH=ffprobe                       # Win 示例: D:/your_tools/ffmpeg/ffprobe.exe
 
-# 本地 IndexTTS-2.5（推荐）
-DEFAULT_TTS_ENGINE=indextts25
-INDEXTTS_ROOT=D:/your_path/index-tts
-INDEXTTS_PYTHON=D:/your_path/index-tts/.venv/Scripts/python.exe
+# 本地 IndexTTS-2.5（可选；Mac 零显卡用户可跳过，改用系统 say）
+DEFAULT_TTS_ENGINE=macos-say-cpu            # Win 示例: indextts25 / windows-sapi-cpu
+INDEXTTS_ROOT=                              # Win 示例: D:/your_path/index-tts
+INDEXTTS_PYTHON=                            # Win 示例: D:/.../.venv/Scripts/python.exe；Mac: /path/.venv/bin/python
 INDEXTTS_ENDPOINT=http://127.0.0.1:9880
+MACOS_SAY_VOICE=Tingting                    # say -v '?' 查看可用中文音色（无连字符）
 
-# Remotion 引擎模板目录（若需使用 Remotion 4.x 渲染）
-REMOTION_TEMPLATE_ROOT=D:/your_path/remotion-template
+# Remotion 引擎模板目录（可选；不填则用插件自带依赖）
+REMOTION_TEMPLATE_ROOT=                     # Win 示例: D:/your_path/remotion-template
 ```
 
 ### 方式 A：一行命令 / DSH 插件市场一键静默安装（推荐，免配置 Remotion 与 FFmpeg）
 
-本仓库根目录已构建为标准单包 DSH Bundle（零 `workspace:*` 依赖、零 `postinstall` 构建脚本），声明并随包自动安装 **`remotion`、`@remotion/bundler`、`@remotion/renderer`、`react`、`typescript`、`@ffmpeg-installer/ffmpeg`、`@ffprobe-installer/ffprobe`**，且在 Windows 下可自动复用系统自带 Microsoft Edge 完成 Remotion 与 HTML5 出片，无需用户再手动下载安装 Remotion 工程或配置 `FFMPEG_PATH`。
+本仓库根目录已构建为标准单包 DSH Bundle（零 `workspace:*` 依赖、零 `postinstall` 构建脚本），声明并随包自动安装 **`remotion`、`@remotion/bundler`、`@remotion/renderer`、`react`、`typescript`、`@ffmpeg-installer/ffmpeg`、`@ffprobe-installer/ffprobe`**，且可自动复用系统自带浏览器（Windows 用 Microsoft Edge，macOS 用 Chrome/Edge）完成 Remotion 与 HTML5 出片，无需用户再手动下载安装 Remotion 工程或配置 `FFMPEG_PATH`。
 
 ```powershell
 # 直接从 GitHub 安装到 DSH 桌面端或 web profile（自动静默拉齐 Remotion + FFmpeg 依赖）
@@ -191,7 +217,8 @@ node scripts/install-profile.mjs
 # 启动独立 Web 控制台（默认监听 http://127.0.0.1:4399，可用 DSH_VIDEO_PORT 改端口）
 node scripts/dsh-runner.mjs video --keep-alive
 
-# 或者使用快捷脚本（Windows 下若 4399 已被旧进程占用请先关闭旧窗口或改 DSH_VIDEO_PORT）
+# macOS/Linux 一键启动（自动打开浏览器）：bash start-workbench.sh
+# 若 4399 已被旧进程占用请先关闭旧进程或改 DSH_VIDEO_PORT
 .\pnpm.cmd dsh video --keep-alive
 ```
 
@@ -234,7 +261,7 @@ node scripts/pack-bundle.mjs
 ## 🔧 七、常见问题排查 (Troubleshooting)
 
 1. **在 DSH Desktop 客户端里点击「开启摄像头与麦克风」提示 `Permission denied` 怎么办？**
-   - 原因通常为 Electron 桌面客户端内置 Webview 默认未放行相机权限，或 Windows「设置 → 隐私和安全性 → 相机/麦克风 → 允许桌面应用访问」被关闭。
+   - 原因通常为 Electron 桌面客户端内置 Webview 默认未放行相机权限，或系统隐私设置（macOS「系统设置 → 隐私与安全性 → 相机/麦克风」/ Windows「设置 → 隐私和安全性 → 相机/麦克风」）未允许桌面应用访问。
    - 解决：工作台提词自拍弹窗已内置零阻塞退路——会先尝试单独降级为仅麦克风录音；若均被拦截，可直接点弹窗内的 **「🌐 在系统浏览器中打开自拍」**（用 Chrome/Edge 打开独立网页端口 `4399` 正常授权录制），或点 **「📁 直接上传本机已录视频/音频入库」** 把手机/系统相机录好的文件一键导入为出镜底板并提取克隆声纹。
 2. **如果单独打开 `http://127.0.0.1:4399` 遇到黑屏或端口被占用怎么办？**
    - 原因通常为本机后台残留了旧版本 `dsh-runner.mjs` 监听在 `4399`，导致浏览器拉到新旧不匹配脚本，或外部 CDN 访问过慢。
@@ -247,15 +274,15 @@ node scripts/pack-bundle.mjs
 ## 🌐 八、English Documentation
 
 ### Overview
-**DSH Video Workbench (`dsh-video-workbench`)** is an open-source multi-agent Cordis plugin suite for **DeepSeek Harness (DSH)** on Windows 11. It orchestrates a 4-Agent pipeline (`Director → Asset Editor → TTS/SFX/BGM Mixer → Motion Coder & QA Renderer`) supporting **Remotion 4.x TSX** (with `<FreeformThreeStage />` unrestricted Three.js 3D + custom SVG/HUD + beat-synced spring physics) and **HyperFrames HTML5/Canvas + Three.js (`proj3D`)** engines, adaptive genre pacing, FFT/RMS BGM beat-sync (`tts`, `tts-beat-sync`, `subtitle-mv`), multi-engine TTS (`IndexTTS-2.5`, `IndexTTS-2`, low-VRAM `GPT-SoVITS`, zero-GPU `Windows Native SAPI`, plus extensible OpenAI/HTTP/CPU-CLI model import) with voice cloning, real-time **Hardware Preflight & Low-Spec Protection Mode** (`8GB RAM + iGPU/CPU-only supported`), commercial-safe OFL typography (`Noto Sans SC`, `Source Han Serif SC Heavy`, `JetBrains Mono`), and model-agnostic 4-protocol LLM authoring (`OpenAI Chat`, `Anthropic Messages`, `OpenAI Responses`, `Gemini Native`).
+**DSH Video Workbench (`dsh-video-workbench`)** is an open-source multi-agent Cordis plugin suite for **DeepSeek Harness (DSH)** on Windows, macOS and Linux. It orchestrates a 4-Agent pipeline (`Director → Asset Editor → TTS/SFX/BGM Mixer → Motion Coder & QA Renderer`) supporting **Remotion 4.x TSX** (with `<FreeformThreeStage />` unrestricted Three.js 3D + custom SVG/HUD + beat-synced spring physics) and **HyperFrames HTML5/Canvas + Three.js (`proj3D`)** engines, adaptive genre pacing, FFT/RMS BGM beat-sync (`tts`, `tts-beat-sync`, `subtitle-mv`), multi-engine TTS (`IndexTTS-2.5`, `IndexTTS-2`, low-VRAM `GPT-SoVITS`, zero-GPU system TTS (`macOS say` / `Windows SAPI` / `Linux espeak-ng`), plus extensible OpenAI/HTTP/CPU-CLI model import) with voice cloning, real-time **Hardware Preflight & Low-Spec Protection Mode** (`8GB RAM + iGPU/CPU-only supported`), commercial-safe OFL typography (`Noto Sans SC`, `Source Han Serif SC Heavy`, `JetBrains Mono`), and model-agnostic 4-protocol LLM authoring (`OpenAI Chat`, `Anthropic Messages`, `OpenAI Responses`, `Gemini Native`).
 
 ### System Requirements & Low-Spec Protection
-- **Minimum (Low-Spec Protection Mode)**: 4-core CPU, 8 GB RAM (`>= 2.5 GB` free), integrated/no dedicated GPU (rasterized 3D + Windows SAPI / Edge-TTS / Beat-Sync MV), 3 GB free disk (`720p 30fps`).
+- **Minimum (Low-Spec Protection Mode)**: 4-core CPU, 8 GB RAM (`>= 2.5 GB` free), integrated/no dedicated GPU (rasterized 3D + system TTS (macOS say / Windows SAPI) / Edge-TTS / Beat-Sync MV), 3 GB free disk (`720p 30fps`).
 - **Recommended**: 8-core+ CPU, 16 GB RAM, NVIDIA 6–8 GB+ VRAM GPU (`1080p 30/60fps` + local `GPT-SoVITS` / `IndexTTS-2.5`).
 - Toggle anytime via the Topbar **Hardware Guard** button or `check_hardware_profile` tool (`auto` / `safe` / `performance`).
 
 ### Package Structure
-- `packages/shared`: Zero-hardcode `.env` loader, Windows sandbox-safe `ffmpeg`/`ffprobe` runner, OFL font sync, and safe-zone compliance calculator.
+- `packages/shared`: Zero-hardcode `.env` loader, sandbox-safe `ffmpeg`/`ffprobe` runner, OFL font sync, and safe-zone compliance calculator.
 - `packages/dsh-tool-media`: Multimodal director & 4-tier schema degradation planner (`plan-schema.js`), FFT/energy BGM beat analyzer (`beat-analyzer.js`), DSP 48kHz WAV synthesizer & ducked mixer, adaptive genre pacing, and batched Remotion TSX / HTML5 coder (`ai-coder.js`).
 - `packages/dsh-tool-local-tts`: Multi-engine TTS adapter (`IndexTTS-2.5` persistent server, `IndexTTS-2`, low-VRAM `GPT-SoVITS` `api_v2.py`/v1, plus importable OpenAI `/v1/audio/speech`, custom HTTP JSON, and CPU CLI models like `edge-tts`), 205+ voice catalog, voice cloning, and `ffprobe` duration alignment.
 - `packages/dsh-tool-avatar`: Transparent `yuva420p` WebM digital human compositor (RMS-driven SVG anchor, FFmpeg squircle/chromakey overlay, and pluggable external MuseTalk / LatentSync REST adapter).

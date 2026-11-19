@@ -246,12 +246,14 @@ async function runSelfTest() {
   })
   matchAllScenesInScript(tmpHtmlProj, { voiceId: 'auto' })
 
-  // 5. Real IndexTTS-2.5 Persistent Server Synthesis + ffprobe Duration + Multi-Track Audio Mix
-  console.log(`[5/8] Ensuring persistent IndexTTS-2.5 HTTP server for REAL speech synthesis...`)
+  // 5. Real TTS synthesis (platform-aware): IndexTTS-2.5 on GPU boxes, system TTS (Mac say / Win SAPI) otherwise.
+  console.log(`[5/8] Ensuring a ready TTS engine for REAL speech synthesis...`)
   const ttsHealth = await ensureTtsServer({ waitMs: 300_000 })
-  if (ttsHealth?.engine !== 'indextts25') {
-    throw new Error(`Expected IndexTTS-2.5 server engine 'indextts25', got: ${JSON.stringify(ttsHealth)}`)
+  const acceptedTtsEngines = ['indextts25', 'indextts2', 'gptvoice', 'macos-say-cpu', 'windows-sapi-cpu', 'linux-espeak-cpu']
+  if (!ttsHealth?.ready || !acceptedTtsEngines.includes(ttsHealth?.engine)) {
+    throw new Error(`Expected a ready TTS engine, got: ${JSON.stringify(ttsHealth)}`)
   }
+  console.log(`      TTS engine in use: ${ttsHealth.engine} (${ttsHealth.kind})`)
   const reReadHtml = await import('../packages/shared/index.js').then((m) => m.readScriptJson(tmpHtmlProj))
   const twoScenes = reReadHtml.data.scenes.slice(0, 2)
   reReadHtml.data.scenes = twoScenes
@@ -738,8 +740,11 @@ export const BATCH_01_SCENES: Record<string, React.FC<CustomSceneProps>> = { 'sc
   }
 
   const liveHealth = await getTtsServerHealth()
-  if (!liveHealth?.ok || liveHealth.engine !== 'indextts25' || liveHealth.version !== '2.5') {
-    throw new Error(`IndexTTS-2.5 health assertion failed: ${JSON.stringify(liveHealth)}`)
+  // Platform-aware: on macOS/Linux the zero-GPU system TTS engine is active instead of IndexTTS-2.5.
+  const liveOk = liveHealth?.ready === true || liveHealth?.ok === true
+  const versionOk = liveHealth.engine === 'indextts25' ? liveHealth.version === '2.5' : true
+  if (!liveOk || !versionOk) {
+    throw new Error(`TTS health assertion failed: ${JSON.stringify(liveHealth)}`)
   }
   const vmDspRes = await masterVoiceTracks({ projectDir: tmpHtmlProj, useLlm: false })
   if (!vmDspRes.ok || vmDspRes.scenesCount < 1 || !existsSync(join(tmpHtmlProj, 'output', 'voice_mastering_report.json'))) {

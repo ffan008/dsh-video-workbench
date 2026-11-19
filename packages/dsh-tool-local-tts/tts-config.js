@@ -4,6 +4,55 @@ import { loadEnv, REPO_ROOT, resolveEnvPath } from '../shared/index.js'
 
 export const TTS_CONFIG_FILENAME = '.dsh-video-tts-config.json'
 
+/**
+ * Cross-platform zero-GPU system TTS engine.
+ * Windows: PowerShell + System.Speech (SAPI)
+ * macOS:   built-in `say` command (AIFC -> normalized PCM WAV via FFmpeg)
+ * Linux:   espeak-ng / espeak command (WAV -> normalized PCM WAV via FFmpeg)
+ * All require no discrete GPU and no model download.
+ */
+export function getSystemTtsEngine() {
+  if (process.platform === 'win32') {
+    return {
+      id: 'windows-sapi-cpu',
+      builtin: true,
+      kind: 'system-tts',
+      provider: 'windows-sapi',
+      name: 'Windows 系统原生中文语音 (零显卡纯CPU)',
+      shortName: 'Windows 原生',
+      vramBadge: '0GB 显存 · 免下载开箱即用',
+      description: '直接调用 Windows 10/11 内置 System.Speech 中文语音引擎并支持语速调节，无独立显卡/低配电脑零配置立即可用。',
+      supportsZeroShotClone: false,
+    }
+  }
+  if (process.platform === 'darwin') {
+    return {
+      id: 'macos-say-cpu',
+      builtin: true,
+      kind: 'system-tts',
+      provider: 'macos-say',
+      name: 'macOS 系统原生语音 say (零显卡纯CPU)',
+      shortName: 'Mac 原生',
+      vramBadge: '0GB 显存 · 免下载开箱即用',
+      description: '直接调用 macOS 内置 say 命令（ Ting-Ting / Mei-Jia 等中文声音），无需显卡与模型下载；输出经 FFmpeg 统一为 48kHz PCM WAV。',
+      supportsZeroShotClone: false,
+    }
+  }
+  return {
+    id: 'linux-espeak-cpu',
+    builtin: true,
+    kind: 'system-tts',
+    provider: 'espeak-ng',
+    name: 'Linux espeak-ng 系统语音 (零显卡纯CPU)',
+    shortName: 'Linux 原生',
+    vramBadge: '0GB 显存 · 免下载开箱即用',
+    description: '调用 Linux espeak-ng / espeak 命令合成语音，无需显卡与模型下载；首次使用需 `apt install espeak-ng`。',
+    supportsZeroShotClone: false,
+  }
+}
+
+export const SYSTEM_TTS_ENGINE = getSystemTtsEngine()
+
 export const BUILTIN_TTS_ENGINES = [
   {
     id: 'indextts25',
@@ -35,20 +84,7 @@ export const BUILTIN_TTS_ENGINES = [
     description: '专为低显存 / 中低配显卡优化的轻量配音与音色克隆方案，兼容 api_v2.py 与 v1 接口。',
     supportsZeroShotClone: true,
   },
-  ...(process.platform === 'win32'
-    ? [
-        {
-          id: 'windows-sapi-cpu',
-          builtin: true,
-          kind: 'windows-sapi',
-          name: 'Windows 系统原生中文语音 (零显卡纯CPU)',
-          shortName: 'Windows 原生',
-          vramBadge: '0GB 显存 · 免下载开箱即用',
-          description: '直接调用 Windows 10/11 内置 System.Speech 中文语音引擎并支持语速调节，无独立显卡/低配电脑零配置立即可用。',
-          supportsZeroShotClone: false,
-        },
-      ]
-    : []),
+  SYSTEM_TTS_ENGINE,
 ]
 
 export const QUICK_TTS_TEMPLATES = [
@@ -199,7 +235,7 @@ export function loadTtsConfig(repoRoot = REPO_ROOT) {
     (envBuiltins.indextts25?.rootDir && existsSync(envBuiltins.indextts25.rootDir)) ||
       (envBuiltins.gptvoice?.rootDir && existsSync(envBuiltins.gptvoice.rootDir)),
   )
-  const autoFallbackDefault = !hasLocalGpuRoots && process.platform === 'win32' ? 'windows-sapi-cpu' : 'indextts25'
+  const autoFallbackDefault = !hasLocalGpuRoots ? SYSTEM_TTS_ENGINE.id : 'indextts25'
   const activeEngineId = String(saved.activeEngineId || envDefault || autoFallbackDefault).trim() || autoFallbackDefault
   return {
     version: 1,
@@ -359,7 +395,7 @@ export function resolveTtsEngineSpec(requestedEngine = '', repoRoot = REPO_ROOT)
       ...builtin,
       ...overrides,
       endpoint:
-        builtin.kind === 'windows-sapi'
+        builtin.kind === 'system-tts'
           ? ''
           : overrides.endpoint || (builtin.id === 'gptvoice' ? 'http://127.0.0.1:9881' : 'http://127.0.0.1:9880'),
     }

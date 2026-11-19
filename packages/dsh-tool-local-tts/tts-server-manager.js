@@ -2,7 +2,7 @@
  * Manages the persistent IndexTTS-2.5 / IndexTTS-2 HTTP server (`scripts/tts-server.py`).
  * The model is loaded once (~15-60s) and then every sentence only costs fast GPU inference time.
  */
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, openSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { loadEnv, REPO_ROOT, resolveEnvPath, resolvePackagePath } from '../shared/index.js'
@@ -16,10 +16,28 @@ function endpoint(engineId = 'indextts25') {
   return (spec?.endpoint || process.env.INDEXTTS_ENDPOINT || 'http://127.0.0.1:9880').replace(/\/+$/, '')
 }
 
+/** Check whether a command is resolvable on PATH (cross-platform, no external deps). */
+function commandOnPath(cmd) {
+  if (!cmd) return false
+  try {
+    const probe = spawnSync(process.platform === 'win32' ? 'where' : 'which', [cmd], { encoding: 'utf8', timeout: 2000 })
+    return probe.status === 0
+  } catch {
+    return false
+  }
+}
+
 export async function getTtsServerHealth(timeoutMs = 2500, engineId = '') {
   const spec = resolveTtsEngineSpec(engineId)
-  if (spec.kind === 'windows-sapi') {
-    const ok = process.platform === 'win32'
+  if (spec.kind === 'system-tts') {
+    const provider = String(spec.provider || (process.platform === 'win32' ? 'windows-sapi' : process.platform === 'darwin' ? 'macos-say' : 'espeak-ng'))
+    // On Windows SAPI is built into the OS; on Mac `say` ships by default; on Linux espeak-ng may be missing.
+    const ok = provider === 'windows-sapi' || provider === 'macos-say' || commandOnPath(spec.command || 'espeak-ng')
+    const messageByProvider = {
+      'windows-sapi': 'Windows 系统内置语音就绪（0 显存纯 CPU）',
+      'macos-say': 'macOS 系统 say 语音就绪（0 显存纯 CPU）',
+      'espeak-ng': ok ? 'espeak-ng 语音就绪（0 显存纯 CPU）' : '未检测到 espeak-ng，请先安装：sudo apt install espeak-ng',
+    }
     return {
       reachable: ok,
       ready: ok,
@@ -27,7 +45,7 @@ export async function getTtsServerHealth(timeoutMs = 2500, engineId = '') {
       engineName: spec.name,
       kind: spec.kind,
       vramBadge: spec.vramBadge,
-      message: ok ? 'Windows 系统内置语音就绪（0 显存纯 CPU）' : '仅支持 Windows 平台',
+      message: messageByProvider[provider] || (ok ? '系统原生语音就绪（0 显存纯 CPU）' : '系统语音不可用'),
     }
   }
   if (spec.kind === 'openai-tts' || spec.kind === 'http-json') {
@@ -171,7 +189,7 @@ function spawnServer(engineId = 'indextts25') {
       env: {
         ...process.env,
         PYTHONIOENCODING: 'utf-8',
-        PATH: [...pyPaths, process.env.PATH || ''].join(';'),
+        PATH: [...pyPaths, process.env.PATH || ''].join(process.platform === 'win32' ? ';' : ':'),
       },
       detached: true,
       stdio: ['ignore', logFd, logFd],
@@ -202,7 +220,7 @@ function spawnServer(engineId = 'indextts25') {
     TRANSFORMERS_CACHE: join(root, 'tf_download'),
     GRADIO_TEMP_DIR: join(REPO_ROOT, '.tmp', 'gradio'),
     XFORMERS_FORCE_DISABLE_TRITON: '1',
-    PATH: [...pyPaths, process.env.PATH || ''].join(';'),
+    PATH: [...pyPaths, process.env.PATH || ''].join(process.platform === 'win32' ? ';' : ':'),
   }
   const child = spawn(python, ['-s', resolvePackagePath('scripts', 'tts-server.py'), '--root', root, '--port', String(port)], {
     cwd: root,
@@ -220,7 +238,7 @@ function spawnServer(engineId = 'indextts25') {
  */
 export async function ensureTtsServer({ waitMs = 300_000, onWait, engineId = '' } = {}) {
   const spec = resolveTtsEngineSpec(engineId)
-  if (spec.kind === 'windows-sapi' || !['indextts25', 'indextts2', 'gptvoice'].includes(spec.kind)) {
+  if (spec.kind === 'system-tts' || !['indextts25', 'indextts2', 'gptvoice'].includes(spec.kind)) {
     return await getTtsServerHealth(2500, spec.id)
   }
   const h = await getTtsServerHealth(2500, spec.id)

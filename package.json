@@ -53,6 +53,7 @@
   "scripts": {
     "dsh": "node ./scripts/dsh-runner.mjs",
     "dsh:video": "node ./scripts/dsh-runner.mjs video",
+    "start:mac": "bash ./start-workbench.sh",
     "setup:profile": "node ./scripts/install-profile.mjs",
     "pack:bundle": "node ./scripts/pack-bundle.mjs",
     "test": "node ./scripts/self-test.mjs"

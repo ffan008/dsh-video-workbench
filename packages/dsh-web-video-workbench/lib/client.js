@@ -18,6 +18,10 @@ window.__ModuleLoader__?.load({
     })()
     const createPortal = ReactDomMod?.createPortal || ReactDomMod?.default?.createPortal || null
     const { useState, useEffect, useRef, useMemo, useCallback } = React
+    // Platform-aware labels (Mac / Windows / Linux).
+    const isMacPlatform = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '')
+    const OS_LABEL = isMacPlatform ? 'macOS' : 'Windows'
+    const SYSTEM_TTS_LABEL = isMacPlatform ? 'Mac 原生 say 语音' : 'Windows 原生纯CPU'
     const h = React.createElement
 
     // =========================================================================
@@ -3078,7 +3082,7 @@ window.__ModuleLoader__?.load({
                 const msg = errFinal?.message || errAll?.message || 'Permission denied'
                 const isDenied = /denied|permission|notallowed/i.test(`${errAll?.name} ${msg}`)
                 const humanErr = isDenied
-                  ? `摄像头与麦克风权限被拦截 (${msg})${deviceHint}：\n1) DeepSeek Harness 桌面端内置浏览框架可能未授予网页摄像头权限；\n2) 请检查 Windows「设置 → 隐私和安全性 → 相机/麦克风 → 允许桌面应用访问」；\n3) 也可直接点击下方在系统浏览器打开或直接上传本机视频！`
+                  ? `摄像头与麦克风权限被拦截 (${msg})${deviceHint}：\n1) DeepSeek Harness 桌面端内置浏览框架可能未授予网页摄像头权限；\n2) ${isMacPlatform ? '请检查 macOS「系统设置 → 隐私与安全性 → 相机/麦克风 → 允许 DeepSeek Harness 访问」' : '请检查 Windows「设置 → 隐私和安全性 → 相机/麦克风 → 允许桌面应用访问」'}；\n3) 也可直接点击下方在系统浏览器打开或直接上传本机视频！`
                   : `无法开启摄像头 (${msg})${deviceHint}`
                 setCamError(humanErr)
                 notify(isDenied ? '摄像头被系统或 DSH 桌面端权限拦截，已提供浏览器直开与本地上传替代方案' : `摄像头打开失败: ${msg}`, 'error')
@@ -3415,7 +3419,7 @@ window.__ModuleLoader__?.load({
           const isDenied = /denied|permission|notallowed/i.test(`${err?.name} ${err?.message}`)
           notify(
             isDenied
-              ? '麦克风权限被当前桌面端或 Windows 隐私拦截，请点下方「上传本地干声音频」或先检查 Windows 隐私→麦克风权限'
+              ? `麦克风权限被当前桌面端或 ${OS_LABEL} 隐私拦截，请点下方「上传本地干声音频」或先检查 ${OS_LABEL} 隐私→麦克风权限`
               : `无法开启麦克风: ${err.message}`,
             'error',
           )
@@ -4221,7 +4225,7 @@ window.__ModuleLoader__?.load({
             {
               type: 'button',
               className: 'dsh-vw-btn',
-              title: '切换 IndexTTS-2.5 / GPT-SoVITS (低显存) / Windows 原生纯CPU / 添加或导入其他配音模型',
+              title: `切换 IndexTTS-2.5 / GPT-SoVITS (低显存) / ${SYSTEM_TTS_LABEL} / 添加或导入其他配音模型`,
               onClick: () => setShowTtsModal(true),
               style: {
                 ...ghostBtnStyle,
@@ -7228,7 +7232,7 @@ window.__ModuleLoader__?.load({
                         'div',
                         { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px' } },
                         h('div', null, h('div', { style: { fontSize: '12px', color: T.textMuted, marginBottom: '4px' } }, '可选：GPT-SoVITS 根目录 (自动拉起)'), h('input', { value: builtinTtsForm.gptvoiceRootDir, onChange: (ev) => setBuiltinTtsForm((p) => ({ ...p, gptvoiceRootDir: ev.target.value })), placeholder: '留空则直连上方已启动的 HTTP 地址', style: inputStyle })),
-                        h('div', null, h('div', { style: { fontSize: '12px', color: T.textMuted, marginBottom: '4px' } }, '可选：GPT-SoVITS Python 路径'), h('input', { value: builtinTtsForm.gptvoicePythonBin, onChange: (ev) => setBuiltinTtsForm((p) => ({ ...p, gptvoicePythonBin: ev.target.value })), placeholder: '例如 D:/GPT-SoVITS/runtime/python.exe', style: inputStyle })),
+                        h('div', null, h('div', { style: { fontSize: '12px', color: T.textMuted, marginBottom: '4px' } }, '可选：GPT-SoVITS Python 路径'), h('input', { value: builtinTtsForm.gptvoicePythonBin, onChange: (ev) => setBuiltinTtsForm((p) => ({ ...p, gptvoicePythonBin: ev.target.value })), placeholder: isMacPlatform ? '例如 /Users/你/GPT-SoVITS/runtime/bin/python' : '例如 D:/GPT-SoVITS/runtime/python.exe', style: inputStyle })),
                       ),
                       h(
                         'div',
@@ -7287,7 +7291,7 @@ window.__ModuleLoader__?.load({
                         ? h(
                             'div',
                             { style: { display: 'flex', flexDirection: 'column', gap: '9px', padding: '12px', borderRadius: '11px', background: T.bgElevated } },
-                            h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 120px', gap: '9px' } }, h('input', { value: customTtsForm.command, onChange: (ev) => setCustomTtsForm((p) => ({ ...p, command: ev.target.value })), placeholder: '可执行命令 (如 edge-tts 或 D:/py/python.exe)', style: inputStyle }), h('input', { value: customTtsForm.outputExt, onChange: (ev) => setCustomTtsForm((p) => ({ ...p, outputExt: ev.target.value })), placeholder: '.wav / .mp3', style: inputStyle })),
+                            h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 120px', gap: '9px' } }, h('input', { value: customTtsForm.command, onChange: (ev) => setCustomTtsForm((p) => ({ ...p, command: ev.target.value })), placeholder: isMacPlatform ? '可执行命令 (如 edge-tts 或 python3)' : '可执行命令 (如 edge-tts 或 D:/py/python.exe)', style: inputStyle }), h('input', { value: customTtsForm.outputExt, onChange: (ev) => setCustomTtsForm((p) => ({ ...p, outputExt: ev.target.value })), placeholder: '.wav / .mp3', style: inputStyle })),
                             h('input', { value: customTtsForm.argsTemplate, onChange: (ev) => setCustomTtsForm((p) => ({ ...p, argsTemplate: ev.target.value })), placeholder: '参数模板，如 --text {{text}} --voice {{voice}} --write-media {{output}}', style: { ...inputStyle, fontFamily: 'Consolas, monospace' } }),
                             h('input', { value: customTtsForm.voice, onChange: (ev) => setCustomTtsForm((p) => ({ ...p, voice: ev.target.value })), placeholder: '默认 {{voice}} 变量值 (如 zh-CN-YunxiNeural)', style: inputStyle }),
                           )

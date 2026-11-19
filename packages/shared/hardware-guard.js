@@ -105,6 +105,39 @@ function detectWindowsVideoControllers() {
   }
 }
 
+/** Detect Apple Silicon / Intel Mac GPU via `system_profiler SPDisplaysDataType`. */
+function detectMacVideoControllers() {
+  if (process.platform !== 'darwin') return []
+  try {
+    const out = execFileSync('system_profiler', ['SPDisplaysDataType'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 4000,
+    })
+    const gpus = []
+    const chunks = String(out || '').split(/(?=^\s*Chipset Model:|^\s*Vendor:|^\s*Device ID:)/m)
+    for (const chunk of chunks) {
+      const nameMatch = /(?:Chipset Model|Device ID|Vendor):\s*(.+)/i.exec(chunk)
+      if (!nameMatch) continue
+      const name = nameMatch[1].trim()
+      if (!name || VIRTUAL_GPU_RX.test(name)) continue
+      const isAppleSilicon = /apple m\d/i.test(name)
+      const vramMatch = /VRAM[^:]*:\s*([\d.]+)\s*GB/i.exec(chunk)
+      const vramGB = vramMatch ? Number(vramMatch[1]) : 0
+      gpus.push({
+        name,
+        vendor: /apple/i.test(name) ? 'apple' : /nvidia/i.test(name) ? 'nvidia' : /amd|radeon/i.test(name) ? 'amd' : /intel/i.test(name) ? 'intel' : 'other',
+        vramGB,
+        dedicated: !isAppleSilicon && vramGB >= 3.5,
+        appleSilicon: isAppleSilicon,
+      })
+    }
+    return gpus
+  } catch {
+    return []
+  }
+}
+
 function getFreeDiskGb(targetPath) {
   try {
     const st = statfsSync(targetPath)
@@ -133,10 +166,12 @@ export function probeHardwareProfile({ targetDir = process.cwd(), forceRefresh =
 
   const nvGpus = detectNvidiaSmiGpus()
   const wmiGpus = detectWindowsVideoControllers()
+  const macGpus = detectMacVideoControllers()
 
   // Merge GPU list favoring nvidia-smi exact VRAM (since WMI AdapterRAM caps at uint32 4GB)
   const mergedMap = new Map()
   for (const g of wmiGpus) mergedMap.set(g.name.toLowerCase(), g)
+  for (const g of macGpus) mergedMap.set(g.name.toLowerCase(), g)
   for (const g of nvGpus) mergedMap.set(g.name.toLowerCase(), g)
   const gpus = Array.from(mergedMap.values())
 
@@ -164,15 +199,22 @@ export function probeHardwareProfile({ targetDir = process.cwd(), forceRefresh =
     tierLabel = '核显/轻量显卡配置（画面完整可用 · 配音建议选轻量/CPU方案）'
   }
 
+  // Platform-aware system TTS recommendation: macOS `say`, Windows SAPI, Linux espeak-ng.
+  const isMac = process.platform === 'darwin'
+  const systemTtsId = isMac ? 'macos-say-cpu' : process.platform === 'win32' ? 'windows-sapi-cpu' : 'linux-espeak-cpu'
+  const systemTtsLabel = isMac ? 'macOS 系统原生 say 语音' : process.platform === 'win32' ? 'Windows 系统原生语音' : 'espeak-ng 系统语音'
+
   let ttsAdvice = '本机显存充裕，可流畅运行本地 IndexTTS-2.5 高保真声音克隆。'
   let recommendedTtsEngine = 'indextts25'
   if (!hasNvidiaCuda || maxVramGB < 3.5) {
     ttsAdvice =
-      '检测到当前无 4GB+ NVIDIA 独立显存：建议在「配音引擎中心」一键切换为「Windows 系统原生语音 (0显存纯CPU)」、「Edge-TTS 纯CPU」或选择「纯音乐卡点 (免TTS)」，无需显卡同样流畅出片！'
-    recommendedTtsEngine = 'windows-sapi-cpu'
+      isMac
+        ? `检测到当前无 NVIDIA CUDA 独显（Mac 统一内存架构）：建议在「配音引擎中心」切换为「${systemTtsLabel} (0显存纯CPU)」、「Edge-TTS 纯CPU」或选择「纯音乐卡点 (免TTS)」，无需独显同样流畅出片！`
+        : `检测到当前无 4GB+ NVIDIA 独立显存：建议在「配音引擎中心」一键切换为「${systemTtsLabel} (0显存纯CPU)」、「Edge-TTS 纯CPU」或选择「纯音乐卡点 (免TTS)」，无需显卡同样流畅出片！`
+    recommendedTtsEngine = systemTtsId
   } else if (maxVramGB < 7.5) {
     ttsAdvice =
-      '检测到当前独立显存约 4–6GB：推荐使用「GPT-SoVITS (低显存轻量版)」、「Windows 原生语音」或「Edge-TTS」，比加载大模型更稳更省内存。'
+      `检测到当前独立显存约 4–6GB：推荐使用「GPT-SoVITS (低显存轻量版)」、「${systemTtsLabel}」或「Edge-TTS」，比加载大模型更稳更省内存。`
     recommendedTtsEngine = 'gptvoice'
   }
 

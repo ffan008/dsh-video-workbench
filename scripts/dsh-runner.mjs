@@ -10,6 +10,20 @@ import {
   runCommandRedirected,
 } from '../packages/shared/index.js'
 import { setupDshVideoProfile } from './install-profile.mjs'
+
+/** Open a URL in the system default browser, cross-platform. */
+function openBrowserInSystem(url) {
+  try {
+    const plat = process.platform
+    if (plat === 'win32') {
+      spawn('cmd.exe', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref()
+    } else if (plat === 'darwin') {
+      spawn('open', [url], { detached: true, stdio: 'ignore' }).unref()
+    } else {
+      spawn('xdg-open', [url], { detached: true, stdio: 'ignore' }).unref()
+    }
+  } catch {}
+}
 import LocalTtsPlugin from '../packages/dsh-tool-local-tts/index.js'
 import AvatarPlugin from '../packages/dsh-tool-avatar/index.js'
 import VideoSuitePlugin from '../packages/dsh-tool-video-suite/index.js'
@@ -114,18 +128,22 @@ async function main() {
 
   // Try probing DSH CLI if available and requested
   const dshAppRoot = resolveEnvPath('DSH_APP_ROOT', '')
-  const dshCliCmd = dshAppRoot ? join(dshAppRoot, 'resources', 'runtime', 'cli', 'bin', 'dsh.cmd') : ''
+  const isWin = process.platform === 'win32'
+  const dshCliName = isWin ? 'dsh.cmd' : 'dsh'
+  const dshCliCmd = dshAppRoot ? join(dshAppRoot, 'resources', 'runtime', 'cli', 'bin', dshCliName) : ''
+  const useCmdShell = isWin && dshCliName === 'dsh.cmd'
 
   if (flags.has('--dsh-native') && dshCliCmd && existsSync(dshCliCmd)) {
     console.log(`\n🚀 Launching native DSH CLI with profile '${profileName}'...`)
-    const res = await runCommandRedirected(
-      'cmd.exe',
-      ['/d', '/s', '/c', `"${dshCliCmd}" --profile ${profileName} --version`],
-      {
-        env: { ...process.env, DSH_HOME: profileSetup.dshHome },
-        timeoutMs: 30_000,
-      },
-    )
+    const res = useCmdShell
+      ? await runCommandRedirected('cmd.exe', ['/d', '/s', '/c', `"${dshCliCmd}" --profile ${profileName} --version`], {
+          env: { ...process.env, DSH_HOME: profileSetup.dshHome },
+          timeoutMs: 30_000,
+        })
+      : await runCommandRedirected(dshCliCmd, ['--profile', profileName, '--version'], {
+          env: { ...process.env, DSH_HOME: profileSetup.dshHome },
+          timeoutMs: 30_000,
+        })
     console.log('DSH CLI Output:', (res.stdout || res.stderr).trim())
   }
 
@@ -145,8 +163,8 @@ async function main() {
         const info = await probeRes.json()
         if (info?.version === RUNNER_VERSION && info?.repoRoot === REPO_ROOT) {
           console.log(`\n✅ Active DSH Video Workbench (${RUNNER_VERSION}) already listening at: http://127.0.0.1:${basePort}`)
-          if (shouldOpenBrowser && process.platform === 'win32') {
-            spawn('cmd.exe', ['/c', 'start', '', `http://127.0.0.1:${basePort}`], { detached: true, stdio: 'ignore' }).unref()
+          if (shouldOpenBrowser) {
+            openBrowserInSystem(`http://127.0.0.1:${basePort}`)
           }
           return
         }
@@ -354,8 +372,8 @@ async function main() {
     server.close()
     console.log('✅ `pnpm dsh video` startup & live verification completed with 0 errors.')
   } else {
-    if (shouldOpenBrowser && process.platform === 'win32') {
-      spawn('cmd.exe', ['/c', 'start', '', `http://127.0.0.1:${actualPort}`], { detached: true, stdio: 'ignore' }).unref()
+    if (shouldOpenBrowser) {
+      openBrowserInSystem(`http://127.0.0.1:${actualPort}`)
     }
     console.log('💡 Press Ctrl+C to stop the server.')
   }

@@ -542,13 +542,36 @@ function findRemotionBrowser(remotionRuntime) {
     remotionRuntime?.nodeModulesDir && join(remotionRuntime.nodeModulesDir, '.remotion', 'chrome-headless-shell'),
     remotionRuntime?.templateRoot && join(remotionRuntime.templateRoot, 'node_modules', '.remotion', 'chrome-headless-shell'),
   ].filter(Boolean)
+  const isWin = process.platform === 'win32'
+  const isMac = process.platform === 'darwin'
+  // Remotion stores its headless shell under per-platform subfolders.
+  const platformDirs = isWin
+    ? ['win64', 'win32']
+    : isMac
+      ? ['mac-arm64', 'mac-x64', 'macos', 'mac']
+      : ['linux64', 'linux-x64', 'linux']
+  const binaryNames = isWin
+    ? ['chrome-headless-shell.exe', 'chrome.exe']
+    : isMac
+      ? ['chrome-headless-shell', 'Chromium', 'Google Chrome for Testing']
+      : ['chrome-headless-shell', 'chrome']
   for (const remotionCache of candidates) {
     if (!existsSync(remotionCache)) continue
-    const win64 = join(remotionCache, 'win64')
-    if (existsSync(win64)) {
-      for (const sub of readdirSync(win64)) {
-        const exe = join(win64, sub, 'chrome-headless-shell.exe')
-        if (existsSync(exe)) return exe
+    for (const pdir of platformDirs) {
+      const pRoot = join(remotionCache, pdir)
+      if (!existsSync(pRoot)) continue
+      let subs = []
+      try { subs = readdirSync(pRoot) } catch {}
+      for (const sub of subs) {
+        for (const bin of binaryNames) {
+          let exe = join(pRoot, sub, bin)
+          if (existsSync(exe)) return exe
+          // macOS app bundles embed the binary deeper.
+          if (isMac && /Chrom|Chrome/.test(bin)) {
+            exe = join(pRoot, sub, `${bin}.app`, 'Contents', 'MacOS', bin)
+            if (existsSync(exe)) return exe
+          }
+        }
       }
     }
   }
